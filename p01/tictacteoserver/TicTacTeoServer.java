@@ -1,40 +1,23 @@
 package net.p01.tictacteoserver;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class TicTacTeoServer {
 	final static int PORT = 9000;
-	public static int gameWin(int[] maps) {//-1이면 승자없음, 아니면 해당 칸숫자가 승자. 하드코딩~
-		int result=-1;
-		if (maps[0]!=-1 && maps[0]==maps[1] && maps[1]==maps[2])
-			result= maps[0];
-		else if(maps[3]!=-1 && maps[3]==maps[4]&&maps[4]==maps[5])
-			result = maps[3];
-		else if (maps[6] != -1 &&maps[6]==maps[7]&& maps[7]==maps[8])
-			result = maps[6];
-		else if (maps[0] != -1 && maps[0]==maps[3] && maps[3]==maps[6])
-			result = maps[0];
-		else if (maps[1]!= -1 && maps[1]==maps[4]&& maps[4]==maps[7])
-			result = maps[1];
-		else if (maps[2]!= -1 && maps[2]==maps[5]&& maps[5]==maps[8])
-			result =maps[2];
-		else if (maps[0]!= -1 && maps[0]==maps[4]&&maps[4]==maps[8])
-			result = maps[0];
-		else if (maps[2]!=-1 && maps[2]==maps[4]&& maps[4]==maps[6])
-			result = maps[2];
-		
-		return result;
-	}
-	
 	public static String[] parsePacket(String line) {
 		String[] params = line.split("\\|");
 		return params;
@@ -69,29 +52,44 @@ public class TicTacTeoServer {
 				}
 				System.out.println("Recieved Data : "+line);
 				String[] params = parsePacket(line);
-				int turn = Integer.parseInt(params[0]);
-				maps[Integer.parseInt(params[1])]=turn%2;
-				int winner=gameWin(maps);//승자가 있는지에 대한 함수임.
-				String result="";
-				if(turn!= 9 && winner==-1) {
-					//게임 안끝났고 턴 남음
-					result="N";
-				}else if(winner!= -1) {
-					//승자가 있음
-					result="W|"+(turn%2);
-				}else {
-					//게임 끝났고, 승자없음
-					result = "D";
+				System.out.println(params[0]);
+				if (params[0].equals("S")) {
+					//params[1]의 이름으로 파일출력
+					String filename=params[1];
+					System.out.println("Save File :"+filename);
+					Writer wOut=new FileWriter(filename);
+					BufferedWriter bOut = new BufferedWriter(wOut);
+					PrintWriter pOut = new PrintWriter(bOut);
+					pOut.println(params[2]);
+					pOut.close();
+					System.out.println("File Saved!");
+					pw.println();// 클라이언트로 결과를 전송
+					pw.flush();
+				}else if(params[0].equals("L")) {
+					//params[1]의 이름으로 파일 입력.
+					try {
+					Reader rIn= new FileReader(params[1]);
+					BufferedReader bIn = new BufferedReader(rIn);
+					String logs=bIn.readLine();
+					System.out.println(logs);
+					String packet=String.format("L|%s",logs);
+					pw.println(packet);// 클라이언트로 결과를 전송
+					pw.flush();
+					}catch(IOException e) {
+						String packet=String.format("E");
+						pw.println(packet);// 클라이언트로 결과를 전송
+						pw.flush();
+					}
+					System.out.println("Send Logs");
 				}
-				// 클라이언트로 결과를 전송
-				pw.println(result);
-				pw.flush();
+				
+				
 			}
 			pw.close();
 			br.close();
 					
 		} catch (IOException e) {
-			e.printStackTrace();
+			System.out.println("Client is Killed!");
 		}
 	}
 }
